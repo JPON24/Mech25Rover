@@ -42,6 +42,10 @@ import racecar_utils as rc_utils
 
 rc = racecar_core.create_racecar()
 auton = False
+lastXErr = 0
+lastYErr = 0
+speed = 0.5
+
 # size of color matrix
 
 # Declare any global variables here
@@ -55,6 +59,9 @@ auton = False
 def start():
     # init value for closest object, later recalculated by min function
     auton = False
+    lastXErr = 0
+    lastDist = 0
+    speed = 0.5
 
     # This tells the car to begin at a standstill
     rc.drive.stop()
@@ -72,9 +79,34 @@ def update():
 
    # run full semi-auto sequence 
     if auton:
-        rc.drive.set_speed_angle(0.05,0)
-        find_object()
+        xErr, dist = find_object()
+        rc.drive.set_speed_angle(0.5,1)
+        # move_to_position(xErr, dist)
 
+def move_to_position(xErr, dist):
+    global lastXErr, lastYErr, speed
+
+    # 50 cm offset from object
+    yErr = (dist - 50)
+
+    kp = 1
+    kd = 0.3
+    if (xErr != 0 and dist != 0):
+        xDeriv = (xErr - lastXErr)/rc.get_delta_time()
+        xOutput = xErr * kp + xDeriv * kd
+
+        yDeriv = (yErr - lastYErr)/rc.get_delta_time()
+        yOutput = yErr * kp + yDeriv * kd
+
+        xOutput = rc_utils.clamp(xOutput, -1, 1)
+        yOutput = rc_utils.clamp(yOutput, -1, 1)
+
+        lastXErr = xErr
+        lastYErr = yErr
+
+        rc.drive.set_speed_angle(yOutput, xOutput)
+    else:
+        rc.drive.set_speed_angle(0,0)
 
 def find_object():
     image = rc.camera.get_color_image()
@@ -105,12 +137,12 @@ def find_object():
 
         distanceReading = lidarSamples[offset]
 
-        print('----------')
         print(f'centroidXErr: {centroidXErr}, offset: {offset}, distance: {distanceReading}')
-        print('----------')
-    else:
-        print('no object found')
-    return centroidX, distanceReading
+        
+        return centroidXErr, distanceReading
+
+    print('no object found')
+    return 0,0
 
 def update_slow():
     """
