@@ -46,6 +46,12 @@ lastXErr = 0
 lastYErr = 0
 speed = 0.5
 
+avgX = 0
+avgY = 0
+lowPassThreshold = 0.8
+
+xIntegral = 0
+
 # size of color matrix
 
 # Declare any global variables here
@@ -62,6 +68,12 @@ def start():
     lastXErr = 0
     lastDist = 0
     speed = 0.5
+
+    avgX = 0
+    avgY = 0
+    lowPassThreshold = 0.8
+    
+    xIntegral = 0
 
     # This tells the car to begin at a standstill
     rc.drive.stop()
@@ -81,60 +93,65 @@ def update():
     if auton:
         xErr, dist = find_object()
         move_to_position(xErr,dist)
-        # rc.drive.set_speed_angle(0.5,1)
-        # move_to_position(xErr, dist)
 
 def move_to_position(xErr, dist):
-    global lastXErr, lastYErr, speed
+    global lastXErr, lastYErr, speed, avgX, avgY, xIntegral
 
     # 50 cm offset from object
     yErr = (dist - 50)
 
     canCloseDistance = False
 
-    kp = 1 #1
-    kd = 0.6 #0.6
+    kpx = 1 #1
+    kix = 0.01 # 0.05
+    kdx = 0.1 #0.6
 
-    # add low pass
+    kpy = 1 #1
+    kdy = 0.6 #0.6
 
     # x
+    xIntegral += xErr * rc.get_delta_time()
 
     if (abs(xErr) > 50):
         xDeriv = (xErr - lastXErr)/rc.get_delta_time()
-        xOutput = xErr * kp + xDeriv * kd
+        xOutput = xErr * kpx + kix * xIntegral + xDeriv * kdx
     else:
         xDeriv = (xErr - lastXErr)/rc.get_delta_time()
-        xOutput = xErr * kp + xDeriv * kd
+        xOutput = xErr * kpx + kix * xIntegral + xDeriv * kdx
 
         xOutput *= -0.1
         canCloseDistance = True
+        xIntegral = 0
 
     # y
     if (dist != 0 and canCloseDistance):
         yDeriv = (yErr - lastYErr)/rc.get_delta_time()
-        yOutput = yErr * kp + yDeriv * kd
+        yOutput = yErr * kpy + yDeriv * kdy
     else:
         yOutput = -1
 
     xOutput = rc_utils.clamp(xOutput, -1, 1)
     yOutput = rc_utils.clamp(yOutput, -1, 1)
 
+    xOutput = low_pass(xOutput, avgX)
+    yOutput = low_pass(yOutput, avgY)
+
     lastXErr = xErr
     lastYErr = yErr
 
     rc.drive.set_speed_angle(yOutput, -xOutput)
+
+def low_pass(avg, val):
+    global lowPassThreshold
+    return (avg * lowPassThreshold) + (val * (1-lowPassThreshold))
 
 def find_object():
     image = rc.camera.get_color_image()
     depthImage = rc.camera.get_depth_image()
     
     # HSV THRESHOLDING FOR RED CONE
-    # hsvMin = (0,67,0)
-    # hsvMax = (25,255,255)
     hsvMin = (134,0,0)
     hsvMax = (179,255,255)
-
-    # lidarSamples = rc.lidar.get_samples()
 
     contours = rc_utils.find_contours(image, hsvMin, hsvMax)
 
