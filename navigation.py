@@ -80,7 +80,8 @@ def update():
    # run full semi-auto sequence 
     if auton:
         xErr, dist = find_object()
-        rc.drive.set_speed_angle(0.5,1)
+        move_to_position(xErr,dist)
+        # rc.drive.set_speed_angle(0.5,1)
         # move_to_position(xErr, dist)
 
 def move_to_position(xErr, dist):
@@ -89,34 +90,52 @@ def move_to_position(xErr, dist):
     # 50 cm offset from object
     yErr = (dist - 50)
 
-    kp = 1
-    kd = 0.3
-    if (xErr != 0 and dist != 0):
+    canCloseDistance = False
+
+    kp = 1 #1
+    kd = 0.6 #0.6
+
+    # add low pass
+
+    # x
+
+    if (abs(xErr) > 50):
+        xDeriv = (xErr - lastXErr)/rc.get_delta_time()
+        xOutput = xErr * kp + xDeriv * kd
+    else:
         xDeriv = (xErr - lastXErr)/rc.get_delta_time()
         xOutput = xErr * kp + xDeriv * kd
 
+        xOutput *= -0.1
+        canCloseDistance = True
+
+    # y
+    if (dist != 0 and canCloseDistance):
         yDeriv = (yErr - lastYErr)/rc.get_delta_time()
         yOutput = yErr * kp + yDeriv * kd
-
-        xOutput = rc_utils.clamp(xOutput, -1, 1)
-        yOutput = rc_utils.clamp(yOutput, -1, 1)
-
-        lastXErr = xErr
-        lastYErr = yErr
-
-        rc.drive.set_speed_angle(yOutput, xOutput)
     else:
-        rc.drive.set_speed_angle(0,0)
+        yOutput = -1
+
+    xOutput = rc_utils.clamp(xOutput, -1, 1)
+    yOutput = rc_utils.clamp(yOutput, -1, 1)
+
+    lastXErr = xErr
+    lastYErr = yErr
+
+    rc.drive.set_speed_angle(yOutput, -xOutput)
 
 def find_object():
     image = rc.camera.get_color_image()
+    depthImage = rc.camera.get_depth_image()
     
     # HSV THRESHOLDING FOR RED CONE
-    hsvMin = (160,0,0)
-    hsvMax = (10,255,255)
+    # hsvMin = (0,67,0)
+    # hsvMax = (25,255,255)
+    hsvMin = (134,0,0)
+    hsvMax = (179,255,255)
 
-    lidarSamples = rc.lidar.get_samples()
-    
+    # lidarSamples = rc.lidar.get_samples()
+
     contours = rc_utils.find_contours(image, hsvMin, hsvMax)
 
     largestContour = rc_utils.get_largest_contour(contours)
@@ -127,17 +146,21 @@ def find_object():
     
         # centroid is represented in (y,x) format 
         centroidX = center[1]
+        # print(centroidX)
         centroidXErr = centroidX - 320
-        offset = 0
+        # offset = 0
 
-        if centroidXErr > 0:
-            offset = 719 - abs(int(centroidXErr * 0.17))
-        elif centroidXErr < 0:
-            offset = abs(int(centroidXErr * 0.17))
+        # if centroidXErr > 0:
+        #     offset = 719 - abs(int(centroidXErr * 0.34))
+        # elif centroidXErr < 0:
+        #     offset = abs(int(centroidXErr * 0.34))
 
-        distanceReading = lidarSamples[offset]
+        # distanceReading = lidarSamples[offset]
 
-        print(f'centroidXErr: {centroidXErr}, offset: {offset}, distance: {distanceReading}')
+        distanceReading = depthImage[center[0],center[1]]
+
+        # print(f'centroidXErr: {centroidXErr}, offset: {offset}, distance: {distanceReading}')
+        print(f'centroidXErr: {centroidXErr}, distance: {distanceReading}')
         
         return centroidXErr, distanceReading
 
