@@ -1,9 +1,23 @@
-#python? i was a python once
+Uploading to the car:
 
-for i in range(1000):
+Open an Ubuntu Prompt
+Connect to robot network (racecar_9)
 
-  print('i love python...')
-  
-  print('i swear...')
-  
-  print(f'braincells remaining: {1000-i}')
+racecar cd
+racecar setup
+
+type in password racecar@mit
+
+to run the code, go into a browser
+connect to jupyter lab: http://192.168.0.109:8888/
+
+open two terminals
+in the first terminal, type: bash
+then type:
+racecar cd 
+teleop
+
+Prompt 2:
+cd student
+cd labs
+python3 name.py
