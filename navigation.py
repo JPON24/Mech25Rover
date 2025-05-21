@@ -31,6 +31,7 @@ Expected Outcome: Terminal output and RACECAR movement occurs when buttons are p
 import sys
 from time import time
 import math as Math
+import cv2 as cv
 
 sys.path.insert(0, '../library')
 import racecar_core
@@ -51,6 +52,16 @@ avgY = 0
 lowPassThreshold = 0.8
 
 xIntegral = 0
+
+capture = None
+
+for i in range(100):
+    if (capture == None):
+        capture = cv.VideoCapture(i)
+        print(f"not found at position: {i}" )
+        continue
+    print(f"found at position: {i}")
+    break
 
 # size of color matrix
 
@@ -92,7 +103,7 @@ def update():
    # run full semi-auto sequence 
     if auton:
         xErr, dist = find_object()
-        move_to_position(xErr,dist)
+        # move_to_position(xErr,dist)
 
 def move_to_position(xErr, dist):
     global lastXErr, lastYErr, speed, avgX, avgY, xIntegral
@@ -146,12 +157,24 @@ def low_pass(avg, val):
     return (avg * lowPassThreshold) + (val * (1-lowPassThreshold))
 
 def find_object():
-    image = rc.camera.get_color_image()
+    global capture
+    # image = rc.camera.get_color_image()
+    ret, image = capture.read()
+    
+    print(ret)
+    print(image)
+
+    if not ret:
+        return 
     depthImage = rc.camera.get_depth_image()
     
     # HSV THRESHOLDING FOR RED CONE
-    hsvMin = (134,0,0)
-    hsvMax = (179,255,255)
+    # hsvMin = (134,0,0)
+    # hsvMax = (179,255,255)
+
+    # thresholding for deer object (and white people apparently?)
+    hsvMin = (107,0,67)
+    hsvMax = (124,185,207)
 
     contours = rc_utils.find_contours(image, hsvMin, hsvMax)
 
