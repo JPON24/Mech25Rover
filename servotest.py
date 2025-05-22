@@ -29,7 +29,7 @@ Expected Outcome: Terminal output and RACECAR movement occurs when buttons are p
 #racecar sim navigation.py
 
 import sys
-from gpiozero import PWMOutputDevice
+from gpiozero import Servo
 import time
 
 sys.path.insert(0, '../library')
@@ -40,7 +40,7 @@ import racecar_utils as rc_utils
 # Global variables
 ########################################################################################
 
-
+rc = racecar_core.create_racecar()
 
 # size of color matrix
 
@@ -50,11 +50,9 @@ import racecar_utils as rc_utils
 ########################################################################################
 # Functions
 ########################################################################################
-new_servo = PWMOutputDevice(5)
+new_servo = Servo(5)
 # [FUNCTION] The start function is run once every time the start button is pressed
 def start():
-    new_servo = PWMOutputDevice(5)
-
     # This tells the car to begin at a standstill
     rc.drive.stop()
 
@@ -64,21 +62,13 @@ def start():
 
 def update():
     global new_servo
-    new_servo.value = 0
-    time.sleep(1)
-    new_servo.value = 1
+    if rc.controller.was_pressed(rc.controller.Button.A):
+        new_servo.value = 0
+        print("min position")
 
-def servo_test():
-    global new_servo
-
-    new_servo.value = 0
-    time.sleep(1)
-    
-    new_servo.value = 0.5
-    time.sleep(1)
-    
-    new_servo.value = 1
-    time.sleep(1)
+    if rc.controller.was_pressed(rc.controller.Button.B):
+        new_servo.value = 1
+        print("max position")
 
 def update_slow():
     """
