@@ -90,3 +90,87 @@ def update_slow():
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)
     rc.go()
+
+________________________________________________________________________________________________________________________________________________________
+
+'''
+"""
+Copyright MIT
+MIT License
+bwsix RC101 - Fall 2023
+
+File Name: servotest.py
+
+Title: Demo RACECAR program (servo test)
+
+Purpose: To verify that basic RACECAR functions work properly and that servo simulation works
+in the Unity simulator using the racecar API (no GPIOZero or Raspberry Pi hardware needed).
+
+Expected Outcome:
+- When started, car simulates servo changes through rc.servo.set_angle()
+"""
+
+########################################################################################
+# Imports
+########################################################################################
+
+import sys
+import time
+
+sys.path.insert(0, '../library')
+import racecar_core
+import racecar_utils as rc_utils
+
+########################################################################################
+# Global variables
+########################################################################################
+
+rc = racecar_core.create_racecar()
+
+########################################################################################
+# Functions
+########################################################################################
+
+def start():
+    """
+    This function is run once when the start button is pressed
+    """
+    print(">> Servo test starting...")
+    rc.drive.stop()
+
+def update():
+    """
+    This function is run every frame
+    """
+    # Test servo simulation with angle values
+    print("Setting servo angle to 0.0")
+    rc.servo.set_angle(0.0)
+    time.sleep(1)
+
+    print("Setting servo angle to 0.5")
+    rc.servo.set_angle(0.5)
+    time.sleep(1)
+
+    print("Setting servo angle to 1.0")
+    rc.servo.set_angle(1.0)
+    time.sleep(1)
+
+    # Optionally stop the car after test
+    rc.drive.stop()
+
+def update_slow():
+    """
+    Runs once per second; can be used to poll buttons if desired
+    """
+    if rc.controller.is_down(rc.controller.Button.RB):
+        print("Right bumper pressed")
+
+########################################################################################
+# Main execution
+########################################################################################
+
+if __name__ == "__main__":
+    rc.set_start_update(start, update, update_slow)
+    rc.go()
+
+'''
