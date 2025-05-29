@@ -62,6 +62,7 @@ servo_r = Servo(13)
 servo_l_pos = 0
 servo_r_pos = 0
 trigger_deadzone = 0.5
+elevator_increment_amount = 0.2
 
 '''
 
@@ -87,9 +88,11 @@ def start():
     servo_l_pos = 1
     servo_r_pos = -1
 
-    servo_l.initial_value(servo_l_pos)
-    servo_r.initial_value(servo_r_pos)
+    servo_l.initial_value = servo_l_pos
+    servo_r.initial_value = servo_r_pos
     trigger_deadzone = 0.5
+
+    elevator_increment_amount = 0.2
 
     rc.drive.stop()
 # END DEF
@@ -103,7 +106,7 @@ UPDATE ALL SUBSYSTEMS
 '''
 
 def update():
-    global speed, auton, flame_ref, servo_l, servo_r, trigger_deadzone
+    global speed, auton, flame_ref, servo_l, servo_r, trigger_deadzone, elevator_increment_amount
     
     # settings normalized speed (0-1)
     rc.drive.set_max_speed(speed)
@@ -115,21 +118,21 @@ def update():
     # when the controller button is pressed, initialize the autonomous sequence
     if rc.controller.was_pressed(rc.controller.Button.A):
         auton = True
-    elif rc.controller.was_pressed(rc.controller.Button.B):
+    elif rc.controller.was_pressed(rc.controller.Button.B): #auton manual override
         auton = False
 
     # servo controls
     if rc.controller.was_pressed(rc.controller.Button.X):
-        extend_elevator()
+        extend_elevator(elevator_increment_amount)
     elif rc.controller.was_pressed(rc.controller.Button.Y):
-        retract_elevator()
+        extend_elevator(elevator_increment_amount)
     
     # collect trigger input data
     diff_rotate_control_postive = rc.controller.get_trigger(rc.controller.Trigger.RIGHT)
     diff_rotate_control_negative = rc.controller.get_trigger(rc.controller.Trigger.LEFT)
 
     # move elevator based on trigger data
-    if (diff_rotate_control_postive > trigger_deadzone)
+    if (diff_rotate_control_postive > trigger_deadzone):
         rotate_elevator(1)
     elif (diff_rotate_control_negative > trigger_deadzone):
         rotate_elevator(-1)
@@ -164,18 +167,25 @@ SERVO ELEVATOR CONTROL SUBSYSTEM
 
 '''
 
-def extend_elevator():
+def extend_elevator(input):
     global servo_l_pos, servo_r_pos
-    servo_l_pos = 1
-    servo_r_pos = -1
 
-    set_servo_pos()
-# END DEF
+    if (input > 0):
+        if (servo_l_pos + rc.get_delta_time() * input > 1):
+            return
+        if (servo_r_pos - rc.get_delta_time() * input < -1):
+            return
 
-def retract_elevator():
-    global servo_l_pos, servo_r_pos
-    servo_l_pos = 1
-    servo_r_pos = -1
+        servo_l_pos += input
+        servo_r_pos -= input
+    else:
+        if (servo_l_pos - rc.get_delta_time() * input < -1):
+            return
+        if (servo_r_pos + rc.get_delta_time() * input > 1):
+            return
+                    
+        servo_l_pos -= input
+        servo_r_pos += input
 
     set_servo_pos()
 # END DEF
@@ -185,17 +195,17 @@ def rotate_elevator(input):
 
     if (input > 0):
         if (servo_l_pos + rc.get_delta_time() * diff_speed > 1):
-            break
+            return
         if (servo_r_pos + rc.get_delta_time() * diff_speed > 1):
-            break
+            return
 
         servo_l_pos += rc.get_delta_time() * diff_speed
         servo_r_pos += rc.get_delta_time() * diff_speed
     else:
         if (servo_l_pos - rc.get_delta_time() * diff_speed < -1):
-            break
+            return
         if (servo_r_pos - rc.get_delta_time() * diff_speed < -1):
-            break
+            return
                     
         servo_l_pos -= rc.get_delta_time() * diff_speed
         servo_r_pos -= rc.get_delta_time() * diff_speed
