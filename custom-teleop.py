@@ -58,7 +58,8 @@ avgY = 0
 lowPassThreshold = 0.8
 xIntegral = 0
 
-# creates references to the external devices connected to the raspberry pi
+# creates references to the external devices connected to the raspberry pi (only if it can, otherwise null ref)
+
 flame_ref = DigitalInputDevice(5)
 servo_l = Servo(6)
 servo_r = Servo(13)
@@ -66,6 +67,7 @@ servo_r = Servo(13)
 # backend positions for the servos for more precise movements 
 servo_l_pos = 0
 servo_r_pos = 0
+servo_fan_pos = 0
 
 # controlling the elevator
 # the amount of trigger force required to move elevator
@@ -95,11 +97,9 @@ def start():
     
     xIntegral = 0
 
-    servo_l_pos = 1
-    servo_r_pos = -1
+    servo_l_pos = 0
+    servo_r_pos = 0
 
-    servo_l.initial_value = servo_l_pos
-    servo_r.initial_value = servo_r_pos
     trigger_deadzone = 0.5
 
     elevator_increment_amount = 0.2
@@ -146,6 +146,11 @@ def update():
         rotate_elevator(1)
     elif (diff_rotate_control_negative > trigger_deadzone):
         rotate_elevator(-1)
+
+    # turn the fan on and off with a servo
+    # if right bumper pressed, turn on fan
+    # if left bumper pressed, turn off fan
+    # add this later when mechanism is confirmed
 
     # detecing and displaying fires - monitor station
     if (flame_ref.value == 0):
@@ -240,9 +245,10 @@ def rotate_elevator(input):
 
 # sets the actual servo positions to the internally handled positions
 def set_servo_pos():
-    global servo_l, servo_r, servo_l_pos, servo_r_pos
+    global servo_l, servo_r, servo_fan, servo_l_pos, servo_r_pos, servo_fan_pos
     servo_l.value = servo_l_pos
     servo_r.value = servo_r_pos
+    servo_fan.value = servo_fan_pos
 # END DEF
 
 '''
